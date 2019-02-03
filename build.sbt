@@ -14,7 +14,12 @@ addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.fu
 lazy val core = (project in file("core"))
   .settings(
     name := "core",
-    libraryDependencies += "org.typelevel" %% "cats-core" % Version.cats % Provided,
+    libraryDependencies ++= Seq(
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value
+    ),
+    libraryDependencies += "org.typelevel" %% "cats-core" % "1.5.0",
+    libraryDependencies += "com.github.mpilquist" %% "simulacrum" % "0.15.0"
   )
 
 lazy val apiDsl = (project in file("api-dsl"))
