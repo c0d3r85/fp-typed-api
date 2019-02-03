@@ -14,23 +14,24 @@ addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.fu
 lazy val core = (project in file("core"))
   .settings(
     name := "core",
-    libraryDependencies += "org.typelevel" %% "cats-core" % "1.5.0" % Provided,
-    libraryDependencies += "com.github.mpilquist" %% "simulacrum" % "0.15.0",
+    libraryDependencies += "org.typelevel" %% "cats-core" % Version.cats % Provided,
   )
 
 lazy val apiDsl = (project in file("api-dsl"))
   .dependsOn(core)
   .settings(
     name := "api-dsl",
-    libraryDependencies += "ru.tinkoff" %% "typed-schema" % "0.10.7.1" % Provided,
+    libraryDependencies += "ru.tinkoff" %% "typed-schema" % Version.tschema % Provided,
   )
 
 lazy val akkaHttp = (project in file("akka-http"))
   .dependsOn(apiDsl)
   .settings(
     name := "akka-http",
-    libraryDependencies += "ru.tinkoff" %% "typed-schema" % "0.10.7.1",
-    libraryDependencies += "org.typelevel" %% "cats-effect" % "1.2.0",
+    libraryDependencies += "ru.tinkoff" %% "typed-schema" % Version.tschema,
+    libraryDependencies += "de.heikoseeberger" %% "akka-http-circe" % Version.akkaHttpCirce,
+    libraryDependencies += "org.typelevel" %% "cats-effect" % Version.catsEffect,
+    libraryDependencies += "com.github.mpilquist" %% "simulacrum" % Version.simulacrum,
   )
 
 lazy val codefest = (project in file("."))
