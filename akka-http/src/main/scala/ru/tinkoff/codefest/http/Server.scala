@@ -1,5 +1,7 @@
 package ru.tinkoff.codefest.http
 
+import scala.concurrent.Future
+
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
@@ -9,9 +11,9 @@ import akka.stream.{ActorMaterializer, Materializer}
 import cats.data.NonEmptyList
 import cats.effect.Sync
 import cats.{Monad, ~>}
-import ru.tinkoff.codefest.http.api.Root
 
-import scala.concurrent.Future
+import ru.tinkoff.codefest.executor.Interpretator
+import ru.tinkoff.codefest.http.api.Root
 
 class Server[F[_]: Sync: Monad](implicit actorSystem: ActorSystem,
                                 nt: F ~> Future) {
@@ -33,7 +35,8 @@ class Server[F[_]: Sync: Monad](implicit actorSystem: ActorSystem,
 
   private val rootModule: RootModule[F] = {
 
-    implicit val controller: Root.Controller[F] = new RootController[F]
+    implicit val controller: Root.Controller[F] =
+      new RootController[F](new Interpretator)
 
     new RootModule[F]
   }

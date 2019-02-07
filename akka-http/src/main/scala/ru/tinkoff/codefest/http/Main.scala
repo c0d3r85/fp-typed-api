@@ -1,11 +1,11 @@
 package ru.tinkoff.codefest.http
 
+import scala.concurrent.Future
+
 import akka.actor.ActorSystem
 import cats.arrow.FunctionK
 import cats.effect.{ExitCode, IO, IOApp}
 import cats.~>
-
-import scala.concurrent.Future
 
 object Main extends IOApp {
 
