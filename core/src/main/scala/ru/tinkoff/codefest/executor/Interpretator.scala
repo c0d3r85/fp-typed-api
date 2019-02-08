@@ -11,10 +11,9 @@ class Interpretator[F[_]: Sync] {
 
   def interpret(code: Vector[String]): F[Vector[String]] = {
     val settings = new Settings
-    settings.processArgumentString(
-      "-deprecation -feature -Xfatal-warnings -Xlint")
-    //settings.usejavacp.value = true
-    settings.usemanifestcp.value = true
+    settings.processArgumentString("-deprecation -feature")
+    settings.usejavacp.value = true
+    //settings.usemanifestcp.value = true использовать если cp, определен в манифесте, например для LauncherJarPlugin
     val res = for {
       out <- Resource.fromAutoCloseable(F.delay(new ByteArrayOutputStream))
       in <- Resource.fromAutoCloseable(F.delay {
@@ -25,7 +24,8 @@ class Interpretator[F[_]: Sync] {
       val intp = new IMain(settings, writer)
       Console.withOut(out) {
         Console.withIn(in) {
-          code.map(intp.interpret)
+          intp.interpret(code.dropRight(1).mkString("\n"))
+          intp.interpret(code.last)
           out
         }
       }
