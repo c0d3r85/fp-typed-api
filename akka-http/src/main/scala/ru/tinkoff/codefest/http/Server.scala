@@ -13,12 +13,13 @@ import cats.effect.Sync
 import cats.{Monad, ~>}
 import cats.syntax.flatMap._
 import cats.syntax.functor._
+import com.bot4s.telegram.models.Update
 
 import ru.tinkoff.codefest.executor.Interpretator
-import ru.tinkoff.codefest.http.api.Root
+import ru.tinkoff.codefest.TelegramBot
+import ru.tinkoff.codefest.http.api.{Root, Telegram}
 
-class Server[F[_]: ConfigModule: Sync: Monad](implicit actorSystem: ActorSystem,
-                                nt: F ~> Future) {
+class Server[F[_]: ConfigModule: Sync: Monad](implicit actorSystem: ActorSystem, nt: F ~> Future) {
 
   def run(config: Server.Config): F[Future[ServerBinding]] = {
     import actorSystem.dispatcher
@@ -39,7 +40,7 @@ class Server[F[_]: ConfigModule: Sync: Monad](implicit actorSystem: ActorSystem,
 
   private implicit val materializer: Materializer = ActorMaterializer()
 
-  private val rootModule: RootModule[F] = {
+  private def rootModule: ApiModule[F] = {
 
     implicit val controller: Root.Controller[F] =
       new RootController[F](new Interpretator)
@@ -47,8 +48,20 @@ class Server[F[_]: ConfigModule: Sync: Monad](implicit actorSystem: ActorSystem,
     new RootModule[F]
   }
 
+  private def telegramModule: ApiModule[F] = {
+
+    implicit val telegramBot: TelegramBot[F] = new TelegramBot[F] {
+      override def update(body: Update): F[Unit] = ???
+    }
+
+    implicit val controller
+      : Telegram.Controller[F] = new TelegramController[F]("") // FIXME: from config
+
+    new TelegramModule[F]
+  }
+
   private val modules: NonEmptyList[ApiModule[F]] =
-    NonEmptyList(rootModule, Nil)
+    NonEmptyList(rootModule, telegramModule :: Nil)
 
 }
 

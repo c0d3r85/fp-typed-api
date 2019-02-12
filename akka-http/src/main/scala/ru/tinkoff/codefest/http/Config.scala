@@ -7,7 +7,9 @@ import simulacrum.typeclass
 
 final case class WebConfig(port: Int)
 
-final case class Config(web: WebConfig)
+final case class TelegramConfig(token: String, webhook: String)
+
+final case class Config(web: WebConfig, telegram: TelegramConfig)
 
 @typeclass(generateAllOps = false) trait ConfigModule[F[_]] {
 
