@@ -12,4 +12,6 @@ object Version {
 
   val tschema: String = "0.10.7.1"
 
+  val telegramBot: String = "4.0.0-RC2"
+
 }

@@ -13,6 +13,7 @@ val commons = addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9") 
   addCompilerPlugin(
   "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full) ::
   (resolvers += Resolver.sonatypeRepo("releases")) ::
+  (libraryDependencies += "com.github.mpilquist" %% "simulacrum" % Version.simulacrum) ::
   Nil
 
 lazy val core = (project in file("core"))
@@ -23,9 +24,8 @@ lazy val core = (project in file("core"))
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "org.scala-lang" % "scala-compiler" % scalaVersion.value
     ),
-    libraryDependencies += "org.typelevel" %% "cats-core" % "1.5.0",
+    libraryDependencies += "org.typelevel" %% "cats-core" % Version.cats,
     libraryDependencies += "org.typelevel" %% "cats-effect" % Version.catsEffect,
-    libraryDependencies += "com.github.mpilquist" %% "simulacrum" % "0.15.0"
   )
 
 lazy val apiDsl = (project in file("api-dsl"))
@@ -33,7 +33,8 @@ lazy val apiDsl = (project in file("api-dsl"))
   .settings(commons: _*)
   .settings(
     name := "api-dsl",
-    libraryDependencies += "ru.tinkoff" %% "typed-schema" % Version.tschema % Provided,
+    libraryDependencies += "ru.tinkoff" %% "typed-schema" % Version.tschema,
+    libraryDependencies += "com.bot4s" %% "telegram-core" % Version.telegramBot,
   )
 
 lazy val akkaHttp = (project in file("akka-http"))
@@ -42,12 +43,10 @@ lazy val akkaHttp = (project in file("akka-http"))
   .settings(commons: _*)
   .settings(
     name := "akka-http",
-    libraryDependencies += "ru.tinkoff" %% "typed-schema" % Version.tschema,
     libraryDependencies += "de.heikoseeberger" %% "akka-http-circe" % Version.akkaHttpCirce,
     libraryDependencies += "org.typelevel" %% "cats-effect" % Version.catsEffect,
-    libraryDependencies += "com.github.mpilquist" %% "simulacrum" % Version.simulacrum,
-    libraryDependencies += "io.circe" %% "circe-config" % Version.circeConfig,
   )
 
 lazy val codefest = (project in file("."))
   .aggregate(akkaHttp)
+

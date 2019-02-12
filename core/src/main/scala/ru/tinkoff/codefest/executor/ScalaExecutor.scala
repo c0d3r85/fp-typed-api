@@ -1,11 +1,11 @@
 package ru.tinkoff.codefest.executor
 
-import cats.Id
-
 import scala.language.higherKinds
 import scala.reflect.runtime.{universe => ru}
 import scala.tools.reflect.{ToolBox, ToolBoxError}
 import scala.util.Try
+
+import cats.Id
 
 trait ScalaExecutor[F[_]] {
   def execute(code: Vector[String]): F[Either[Vector[String], Any]]
@@ -23,12 +23,10 @@ class ReflectScalaExecutor extends ScalaExecutor[Id] {
         |${code.mkString("\n")}
       """.stripMargin
 
-    Try(toolBox.eval(toolBox.parse(fullCodeSnippet)))
-      .toEither
-      .left.map {
-        case ToolBoxError(message, _) =>
-          message.split('\n').filter(_.nonEmpty).toVector
-      }
+    Try(toolBox.eval(toolBox.parse(fullCodeSnippet))).toEither.left.map {
+      case ToolBoxError(message, _) =>
+        message.split('\n').filter(_.nonEmpty).toVector
+    }
   }
 }
 object ReflectScalaExecutor {
