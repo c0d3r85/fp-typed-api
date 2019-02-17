@@ -17,6 +17,8 @@ object Main extends IOApp {
       FunctionK.lift[IO, Future](unsafeToFuture)
     }
 
+    implicit val configModule: ConfigModule[IO] = new ConfigModuleImpl[IO]
+
     implicit val server: Server[IO] = new Server[IO]
 
     for {

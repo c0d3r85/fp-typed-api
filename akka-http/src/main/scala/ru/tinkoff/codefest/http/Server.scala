@@ -11,11 +11,13 @@ import akka.stream.{ActorMaterializer, Materializer}
 import cats.data.NonEmptyList
 import cats.effect.Sync
 import cats.{Monad, ~>}
+import cats.syntax.flatMap._
+import cats.syntax.functor._
 
 import ru.tinkoff.codefest.executor.Interpretator
 import ru.tinkoff.codefest.http.api.Root
 
-class Server[F[_]: Sync: Monad](implicit actorSystem: ActorSystem,
+class Server[F[_]: ConfigModule: Sync: Monad](implicit actorSystem: ActorSystem,
                                 nt: F ~> Future) {
 
   def run(config: Server.Config): F[Future[ServerBinding]] = {
@@ -25,9 +27,13 @@ class Server[F[_]: Sync: Monad](implicit actorSystem: ActorSystem,
       case (acc, module) => acc ~ module.route
     }
 
-    def binding = Http().bindAndHandle(routes, "", 8080)
+    def binding(config: Config) =
+      Http().bindAndHandle(routes, "0.0.0.0", config.web.port)
 
-    Sync[F].delay(binding)
+    for {
+      config <- ConfigModule[F].load
+      b <- Sync[F].delay(binding(config))
+    } yield b
 
   }
 
