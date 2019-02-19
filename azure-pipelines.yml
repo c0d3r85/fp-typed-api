@@ -1,0 +1,18 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+  batch: true
+  paths:
+    exclude:
+    - README.md
+
+pool:
+  vmImage: 'hseeberger/scala-sbt:8u181_2.12.8_1.2.8'
+
+steps:
+- script: |
+    sbt clean compile test
+  displayName: 'CI pipeline'
