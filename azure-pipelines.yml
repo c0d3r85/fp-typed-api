@@ -10,7 +10,9 @@ trigger:
     - README.md
 
 pool:
-  vmImage: 'hseeberger/scala-sbt:8u181_2.12.8_1.2.8'
+  vmImage: 'ubuntu-16.04'
+
+container: 'hseeberger/scala-sbt:8u181_2.12.8_1.2.8'
 
 steps:
 - script: |
