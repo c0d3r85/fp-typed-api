@@ -6,12 +6,17 @@ ThisBuild / scalacOptions ++= Seq("-feature",
                                   "-unchecked",
                                   "-language:postfixOps",
                                   "-language:higherKinds",
+                                  "-language:implicitConversions",
                                   "-Ypartial-unification")
 
-addCompilerPlugin(
-  "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+val commons = addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9") ::
+  addCompilerPlugin(
+  "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full) ::
+  (resolvers += Resolver.sonatypeRepo("releases")) ::
+  Nil
 
 lazy val core = (project in file("core"))
+  .settings(commons: _*)
   .settings(
     name := "core",
     libraryDependencies ++= Seq(
@@ -25,6 +30,7 @@ lazy val core = (project in file("core"))
 
 lazy val apiDsl = (project in file("api-dsl"))
   .dependsOn(core)
+  .settings(commons: _*)
   .settings(
     name := "api-dsl",
     libraryDependencies += "ru.tinkoff" %% "typed-schema" % Version.tschema % Provided,
@@ -33,12 +39,14 @@ lazy val apiDsl = (project in file("api-dsl"))
 lazy val akkaHttp = (project in file("akka-http"))
   .dependsOn(apiDsl, core)
   .enablePlugins(JavaAppPackaging)
+  .settings(commons: _*)
   .settings(
     name := "akka-http",
     libraryDependencies += "ru.tinkoff" %% "typed-schema" % Version.tschema,
     libraryDependencies += "de.heikoseeberger" %% "akka-http-circe" % Version.akkaHttpCirce,
     libraryDependencies += "org.typelevel" %% "cats-effect" % Version.catsEffect,
     libraryDependencies += "com.github.mpilquist" %% "simulacrum" % Version.simulacrum,
+    libraryDependencies += "io.circe" %% "circe-config" % Version.circeConfig,
   )
 
 lazy val codefest = (project in file("."))
