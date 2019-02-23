@@ -22,8 +22,7 @@ object Main extends IOApp {
     implicit val server: Server[IO] = new Server[IO]
 
     for {
-      config <- IO(Server.Config())
-      server <- IO.fromFuture(Server[IO].run(config))
+      server <- IO.fromFuture(Server[IO].run())
       _ = println(server)
       _ <- IO.never
     } yield ExitCode.Success

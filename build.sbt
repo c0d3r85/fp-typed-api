@@ -48,6 +48,7 @@ lazy val akkaHttp = (project in file("akka-http"))
     libraryDependencies += "de.heikoseeberger" %% "akka-http-circe" % Version.akkaHttpCirce,
     libraryDependencies += "org.typelevel" %% "cats-effect" % Version.catsEffect,
     libraryDependencies += "io.circe" %% "circe-config" % Version.circeConfig,
+    libraryDependencies += "com.softwaremill.sttp" %% "async-http-client-backend-cats" % Version.sttpBackend,
   )
 
 lazy val codefest = (project in file("."))

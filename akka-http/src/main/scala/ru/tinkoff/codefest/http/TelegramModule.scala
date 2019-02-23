@@ -12,8 +12,6 @@ import ru.tinkoff.tschema.akkaHttp.MkRoute
 
 class TelegramModule[F[_]: Controller](implicit nt: F ~> Future) extends ApiModule[F] with CirceDecoders {
 
-  // TODO: need setWebhook call
-
   override def route: Route = MkRoute(routes)(Controller[F])
 
 }
