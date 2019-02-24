@@ -1,13 +1,13 @@
-package ru.tinkoff.codefest.http
+package ru.tinkoff.codefest.http.telegram
 
 import cats.MonadError
-import cats.syntax.flatMap._
 import cats.syntax.functor._
+import cats.syntax.flatMap._
 import cats.syntax.monadError._
 import com.bot4s.telegram.models.Update
 
-import ru.tinkoff.codefest.TelegramBot
 import ru.tinkoff.codefest.http.api.Telegram.Controller
+import ru.tinkoff.codefest.telegram.TelegramBot
 
 class TelegramController[F[_]: TelegramBot: MonadError[?[_], Throwable]](telegramToken: String) // FIXME: ADT for exceptions
     extends Controller[F] {

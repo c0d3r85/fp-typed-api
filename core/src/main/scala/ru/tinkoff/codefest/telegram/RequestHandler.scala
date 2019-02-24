@@ -1,33 +1,23 @@
-package ru.tinkoff.codefest
+package ru.tinkoff.codefest.telegram
 
 import java.util.UUID
-import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
 
 import cats.MonadError
 import cats.syntax.applicative._
 import cats.syntax.applicativeError._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
-import cats.syntax.monad._
-import cats.syntax.monadError._
 import com.bot4s.telegram.api.TelegramApiException
 import com.bot4s.telegram.marshalling
-import simulacrum.typeclass
-import com.bot4s.telegram.models.{InputFile, Update}
-import com.softwaremill.sttp.{Id, RequestT, multipart, sttp}
+import com.bot4s.telegram.models.InputFile
+import com.softwaremill.sttp.{Id, RequestT, multipart, sttp, Request => _, Response => _, _}
 import io.circe.parser.parse
 import io.circe.{Decoder, Encoder}
-import com.softwaremill.sttp.{Request => _, Response => _, _}
+import simulacrum.typeclass
 import slogging.StrictLogging
 
-@typeclass(generateAllOps = false) trait TelegramBot[F[_]] {
-
-  def update(body: Update): F[Unit]
-
-}
-
+@typeclass(generateAllOps = false)
 class RequestHandler[F[_]: MonadError[?[_], Throwable]: SttpBackend[?[_], Nothing]](
     token: String,
     telegramHost: String = "api.telegram.org"
@@ -78,7 +68,7 @@ class RequestHandler[F[_]: MonadError[?[_], Throwable]: SttpBackend[?[_], Nothin
 
         val params = fields.getOrElse(Map())
 
-        val ee= sttp.post(uri"$url?$params").multipartBody(parts)
+        val ee = sttp.post(uri"$url?$params").multipartBody(parts)
         println(ee)
         ee
     }
