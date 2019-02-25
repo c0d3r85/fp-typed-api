@@ -12,4 +12,6 @@ object Version {
 
   val tschema: String = "0.10.7.1"
 
+  val scalaTags: String = "0.6.7"
+
 }
