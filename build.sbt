@@ -9,7 +9,8 @@ ThisBuild / scalacOptions ++= Seq("-feature",
                                   "-language:implicitConversions",
                                   "-Ypartial-unification")
 
-val commons = addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9") ::
+val commons = addCompilerPlugin(
+  "org.spire-math" %% "kind-projector" % "0.9.9") ::
   addCompilerPlugin(
   "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full) ::
   (resolvers += Resolver.sonatypeRepo("releases")) ::
@@ -37,7 +38,7 @@ lazy val apiDsl = (project in file("api-dsl"))
   )
 
 lazy val akkaHttp = (project in file("akka-http"))
-  .dependsOn(apiDsl, core)
+  .dependsOn(apiDsl, core, client)
   .enablePlugins(JavaAppPackaging)
   .settings(commons: _*)
   .settings(
@@ -46,7 +47,24 @@ lazy val akkaHttp = (project in file("akka-http"))
     libraryDependencies += "de.heikoseeberger" %% "akka-http-circe" % Version.akkaHttpCirce,
     libraryDependencies += "org.typelevel" %% "cats-effect" % Version.catsEffect,
     libraryDependencies += "com.github.mpilquist" %% "simulacrum" % Version.simulacrum,
+    libraryDependencies += "com.lihaoyi" %% "scalatags" % Version.scalaTags,
     libraryDependencies += "io.circe" %% "circe-config" % Version.circeConfig,
+  )
+  .settings(
+    resourceGenerators in Compile += Def.task {
+      val fullOpt = (fullOptJS in Compile in client).value
+      fullOpt.data :: Nil
+    }.taskValue
+  )
+
+lazy val client = (project in file("client"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(
+    name := "client",
+    scalaJSUseMainModuleInitializer := true
+  )
+  .settings(
+    libraryDependencies += "com.lihaoyi" %%% "scalatags" % Version.scalaTags,
   )
 
 lazy val codefest = (project in file("."))

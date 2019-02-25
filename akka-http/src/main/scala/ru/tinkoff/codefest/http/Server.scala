@@ -21,9 +21,16 @@ class Server[F[_]: ConfigModule: Sync: Monad](implicit actorSystem: ActorSystem,
                                 nt: F ~> Future) {
 
   def run(config: Server.Config): F[Future[ServerBinding]] = {
+    import akka.http.scaladsl.server.Directives._
     import actorSystem.dispatcher
 
-    val routes: Route = modules.tail.foldLeft(modules.head.route) {
+    val frontendRoute = get {
+      pathEndOrSingleSlash { getFromResource("web/index.html") } ~
+        path("client.js") { getFromResource("client-opt.js") } ~
+        getFromResourceDirectory("web")
+    }
+
+    val routes: Route = modules.tail.foldLeft(frontendRoute) {
       case (acc, module) => acc ~ module.route
     }
 
