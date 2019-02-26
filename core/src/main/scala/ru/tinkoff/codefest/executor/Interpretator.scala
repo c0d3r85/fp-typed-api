@@ -33,3 +33,9 @@ class Interpretator[F[_]: Sync] {
     res.use(os => F.pure(os.toString.split("\n").toVector))
   }
 }
+
+object Interpretator {
+
+  def apply[F[_]: Interpretator]: Interpretator[F] = implicitly[Interpretator[F]]
+
+}

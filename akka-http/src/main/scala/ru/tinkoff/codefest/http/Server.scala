@@ -3,43 +3,86 @@ package ru.tinkoff.codefest.http
 import scala.concurrent.Future
 
 import akka.actor.ActorSystem
+import akka.event.Logging.{InfoLevel, LogLevel}
+import akka.event.LoggingAdapter
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
+import akka.http.scaladsl.model.{HttpCharsets, HttpEntity, HttpRequest}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.RouteResult.Complete
+import akka.http.scaladsl.server.directives.{DebuggingDirectives, LogEntry, LoggingMagnet}
+import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, Materializer}
 import cats.data.NonEmptyList
-import cats.effect.Sync
-import cats.{Monad, ~>}
+import cats.effect.{Async, Sync}
 import cats.syntax.flatMap._
 import cats.syntax.functor._
+import cats.{Monad, ~>}
+import com.bot4s.telegram.methods.SetWebhook
+import com.bot4s.telegram.models.Update
+import com.softwaremill.sttp.SttpBackend
+import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
 
 import ru.tinkoff.codefest.executor.Interpretator
-import ru.tinkoff.codefest.http.api.Root
+import ru.tinkoff.codefest.http.api.{Root, Telegram}
+import ru.tinkoff.codefest.http.telegram.{TelegramController, TelegramModule}
+import ru.tinkoff.codefest.telegram.{RequestHandler, ScalaReplBot, TelegramBot}
 
-class Server[F[_]: ConfigModule: Sync: Monad](implicit actorSystem: ActorSystem,
-                                nt: F ~> Future) {
+class Server[F[_]: ConfigModule: Sync: Async: Monad](
+    implicit actorSystem: ActorSystem,
+    nt: F ~> Future
+) {
 
-  def run(config: Server.Config): F[Future[ServerBinding]] = {
+  private def entityAsString(entity: HttpEntity): Future[String] =
+    entity.dataBytes
+      .map(_.decodeString(entity.contentType.charsetOption.getOrElse(HttpCharsets.`UTF-8`).value))
+      .runWith(Sink.head)
+
+  private def logRequestResult(level: LogLevel, route: Route) = {
     import actorSystem.dispatcher
-
-    val routes: Route = modules.tail.foldLeft(modules.head.route) {
-      case (acc, module) => acc ~ module.route
+    def myLoggingFunction(logger: LoggingAdapter)(req: HttpRequest)(res: Any): Unit = {
+      val entry = res match {
+        case Complete(resp) =>
+          for {
+            reqString <- entityAsString(req.entity)
+            data <- entityAsString(resp.entity)
+          } yield
+            LogEntry(
+              s"${req.method} ${req.uri} ${reqString}: ${resp.status} \n entity: $data",
+              level
+            )
+        case other =>
+          entityAsString(req.entity)
+            .map(data => LogEntry(s"${req.method} ${req.uri} \n req entity: $data", level))
+      }
+      entry.map(_.logTo(logger))
     }
+    DebuggingDirectives.logRequestResult(LoggingMagnet(log => myLoggingFunction(log)))(route)
+  }
 
-    def binding(config: Config) =
-      Http().bindAndHandle(routes, "0.0.0.0", config.web.port)
-
+  def run(): F[Future[ServerBinding]] = {
+    import actorSystem.dispatcher
     for {
       config <- ConfigModule[F].load
-      b <- Sync[F].delay(binding(config))
+      handler = new RequestHandler[F](token = config.telegram.token)
+      modules = NonEmptyList(rootModule, telegramModule(config.telegram)(handler) :: Nil)
+      routes = modules.tail.foldLeft(modules.head.route) { (acc, module) =>
+        acc ~ module.route
+      }
+      b <- Sync[F].delay(
+        Http().bindAndHandle(logRequestResult(InfoLevel, routes), "0.0.0.0", config.web.port)
+      )
+      _ <- registerTelegramWebhook(config.telegram)(handler)
     } yield b
 
   }
 
   private implicit val materializer: Materializer = ActorMaterializer()
 
-  private val rootModule: RootModule[F] = {
+  private implicit val sttp: SttpBackend[F, Nothing] = AsyncHttpClientCatsBackend()
+
+  private def rootModule: ApiModule[F] = {
 
     implicit val controller: Root.Controller[F] =
       new RootController[F](new Interpretator)
@@ -47,8 +90,19 @@ class Server[F[_]: ConfigModule: Sync: Monad](implicit actorSystem: ActorSystem,
     new RootModule[F]
   }
 
-  private val modules: NonEmptyList[ApiModule[F]] =
-    NonEmptyList(rootModule, Nil)
+  private def telegramModule(config: TelegramConfig)(implicit handler: RequestHandler[F]): ApiModule[F] = {
+
+    implicit val interpretator: Interpretator[F] = new Interpretator[F]
+
+    implicit val telegramBot: TelegramBot[F] = new ScalaReplBot[F]
+
+    implicit val controller: Telegram.Controller[F] = new TelegramController[F](config.token)
+
+    new TelegramModule[F]
+  }
+
+  private def registerTelegramWebhook(config: TelegramConfig)(implicit handler: RequestHandler[F]): F[Unit] =
+    handler(SetWebhook(url = config.webhook)).void
 
 }
 

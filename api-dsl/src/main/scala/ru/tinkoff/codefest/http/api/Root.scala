@@ -1,5 +1,7 @@
 package ru.tinkoff.codefest.http.api
 
+import simulacrum.typeclass
+
 import ru.tinkoff.tschema.syntax._
 
 object Root {
@@ -12,15 +14,11 @@ object Root {
         Vector[String]]
   }
 
-  trait Controller[F[_]] {
+  @typeclass(generateAllOps = false) trait Controller[F[_]] {
 
     def version: F[Version]
 
     def interpret(body: Vector[String]): F[Vector[String]]
-  }
-
-  object Controller {
-    def apply[F[_]: Controller]: Controller[F] = implicitly[Controller[F]]
   }
 
 }
