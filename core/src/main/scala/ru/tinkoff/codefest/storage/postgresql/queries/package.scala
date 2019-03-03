@@ -1,0 +1,14 @@
+package ru.tinkoff.codefest.storage.postgresql
+
+import io.getquill._
+
+package object queries {
+  import ctx._
+  def findByIdQuery(chatId: ChatId) = quote {
+    query[Chat].filter(_.chatId == lift(chatId))
+  }
+
+  def upsertChatQuery(chat: Chat) = quote {
+    query[Chat].insert(lift(chat)).onConflictUpdate(_.chatId)((t, e) => t.state -> e.state)
+  }
+}

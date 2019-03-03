@@ -16,4 +16,5 @@ object Version {
 
   val telegramBot: String = "4.0.0-RC2"
 
+  val quill = "3.0.1"
 }
