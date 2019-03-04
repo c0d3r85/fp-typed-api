@@ -1,7 +1,5 @@
 package ru.tinkoff.codefest.storage.postgresql
 
-import io.getquill._
-
 package object queries {
   import ctx._
   def findByIdQuery(chatId: ChatId) = quote {

@@ -25,6 +25,7 @@ lazy val core = (project in file("core"))
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "org.scala-lang" % "scala-compiler" % scalaVersion.value
     ),
+    libraryDependencies += "com.beachape" %% "enumeratum" % Version.enumeratum,
     libraryDependencies += "com.github.mauricio" %% "postgresql-async" % "0.2.21",
     libraryDependencies += "io.getquill" %% "quill" % Version.quill,
     libraryDependencies += "org.typelevel" %% "cats-core" % Version.cats,

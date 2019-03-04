@@ -28,7 +28,7 @@ object Main extends IOApp {
 
     for {
       server <- IO.fromFuture(Server[IO].run(nt2))
-      _ = println(server)
+      _ <- IO { println(server) }
       _ <- IO.never
     } yield ExitCode.Success
   }
