@@ -1,5 +1,7 @@
 package ru.tinkoff.codefest.telegram
 
+import scala.tools.nsc.interpreter.IR
+
 import cats.Monad
 import cats.data.{NonEmptyList, OptionT}
 import cats.effect.Sync
@@ -10,6 +12,7 @@ import com.bot4s.telegram.methods.SendMessage
 import com.bot4s.telegram.models.Update
 
 import ru.tinkoff.codefest.executor.Interpretator
+import ru.tinkoff.codefest.executor.Interpretator.Result
 import ru.tinkoff.codefest.storage.Storage
 
 class ScalaReplBot[F[_]: RequestHandler: Storage: Interpretator: Monad: Sync]
@@ -38,7 +41,11 @@ class ScalaReplBot[F[_]: RequestHandler: Storage: Interpretator: Monad: Sync]
     for {
       state <- storage.load(chatId)
       newState = NonEmptyList.of(text, state.toList: _*)
-      result <- Interpretator[F].interpret(newState)
+      result <- Interpretator[F].interpret(newState).map {
+        case Result(IR.Incomplete, _)                     => "<incomplete>" //fixme
+        case r @ Result(_, output) if output.trim.isEmpty => "<empty>" //fixme
+        case r @ Result(_, output)                        => output
+      }
       _ <- RequestHandler[F].apply(SendMessage(chatId = chatId, text = result))
       _ <- storage.save(chatId, newState.reverse.toList.mkString("\n").some)
     } yield F.unit

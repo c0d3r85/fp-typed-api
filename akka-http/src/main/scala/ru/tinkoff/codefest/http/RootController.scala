@@ -16,7 +16,7 @@ class RootController[F[_]: Monad](intp: Interpretator[F]) extends Root.Controlle
     val maybeVector = for {
       nel <- NonEmptyVector.fromVector(body.reverse).toOptionT[F]
       res <- OptionT.liftF(intp.interpret(NonEmptyList.fromReducible(nel)))
-    } yield Vector(res)
+    } yield Vector(res.output)
     maybeVector.getOrElse(Vector.empty[String])
   }
 }
