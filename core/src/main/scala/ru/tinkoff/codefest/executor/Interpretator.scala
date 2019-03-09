@@ -1,7 +1,6 @@
 package ru.tinkoff.codefest.executor
 
 import java.io.{ByteArrayOutputStream, FileInputStream, PrintWriter}
-import java.lang.System.{lineSeparator => EOL}
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interpreter.{IMain, IR}
 
@@ -12,6 +11,8 @@ import cats.syntax.option._
 import ru.tinkoff.codefest.executor.Interpretator.{IRState, Result}
 
 class Interpretator[F[_]: Sync] {
+  import Interpretator.EOL
+
   private val F: Sync[F] = implicitly[Sync[F]]
 
   def interpret(code: NonEmptyList[String]): F[Result] = {
@@ -21,14 +22,19 @@ class Interpretator[F[_]: Sync] {
     //settings.usemanifestcp.value = true использовать если cp, определен в манифесте, например для LauncherJarPlugin
 
     val foldFunction: IMain => (IRState, String) => IRState = intp => {
-      case (IRState(IR.Error, _), _) => IRState(IR.Error)
+      case (IRState(IR.Error, _, _), _) => IRState(IR.Error)
       case (state, line) =>
         val code =
           if (state.status == IR.Incomplete)
-            state.incompleteBuffer.fold(line)(b => s"$b\n$line")
+            state.incompleteBuffer.fold(line)(b => s"$b$EOL$line")
           else line
         intp.interpret(code) match {
-          case IR.Success    => IRState(IR.Success)
+          case IR.Success    =>
+            val acc = for {
+              c <- state.compiled
+              i <- state.incompleteBuffer
+            } yield s"$c$EOL$i"
+            IRState(IR.Success, compiled = acc.fold(line)(a => s"$a$EOL$line").some)
           case IR.Error      => IRState(IR.Error)
           case IR.Incomplete => IRState(IR.Incomplete, code.some)
         }
@@ -48,14 +54,19 @@ class Interpretator[F[_]: Sync] {
       }
       intp.close()
       out.flush()
-      Result(state.status, out.toString)
+      Result(state.status, out.toString, state.compiled)
     }
     res.use(F.pure)
   }
 }
 
 object Interpretator {
-  final case class Result(status: IR.Result, output: String)
-  final case class IRState(status: IR.Result = IR.Success, incompleteBuffer: Option[String] = None)
+  final case class Result(status: IR.Result, output: String, compiled: Option[String])
+  final case class IRState(
+      status: IR.Result = IR.Success,
+      incompleteBuffer: Option[String] = None,
+      compiled: Option[String] = None
+  )
+  private val EOL = "\n"
   def apply[F[_]: Interpretator]: Interpretator[F] = implicitly[Interpretator[F]]
 }

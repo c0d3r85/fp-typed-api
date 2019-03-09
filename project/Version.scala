@@ -19,4 +19,6 @@ object Version {
   val quill = "3.0.1"
 
   val enumeratum = "1.5.13"
+  
+  val `postgresql-async` = "0.2.21"
 }

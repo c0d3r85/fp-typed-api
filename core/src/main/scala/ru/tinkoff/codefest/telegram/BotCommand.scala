@@ -15,7 +15,7 @@ object BotCommand extends Enum[BotCommand] {
 
   private val pattern = s"/(${values.map(_.entryName).mkString("|")})".r
 
-  def unapply(arg: String): Option[BotCommand] = arg match {
+  def unapply(arg: String): Option[BotCommand] = arg.trim match {
     case pattern(cmd) => BotCommand.withName(cmd).some
     case _            => None
   }
