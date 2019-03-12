@@ -27,11 +27,13 @@ import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import ru.tinkoff.codefest.executor.Interpretator
 import ru.tinkoff.codefest.http.api.{Root, Telegram}
 import ru.tinkoff.codefest.http.telegram.{TelegramController, TelegramModule}
+import ru.tinkoff.codefest.storage.Storage
+import ru.tinkoff.codefest.storage.postgresql.PostgreSQLStorage
 import ru.tinkoff.codefest.telegram.{RequestHandler, ScalaReplBot, TelegramBot}
 
 class Server[F[_]: ConfigModule: Sync: Async: Monad](
     implicit actorSystem: ActorSystem,
-    nt: F ~> Future
+    t: F ~> Future
 ) {
 
   private def entityAsString(entity: HttpEntity): Future[String] =
@@ -61,12 +63,12 @@ class Server[F[_]: ConfigModule: Sync: Async: Monad](
     DebuggingDirectives.logRequestResult(LoggingMagnet(log => myLoggingFunction(log)))(route)
   }
 
-  def run(): F[Future[ServerBinding]] = {
+  def run(implicit nt: Future ~> F): F[Future[ServerBinding]] = {
     import actorSystem.dispatcher
     for {
       config <- ConfigModule[F].load
       handler = new RequestHandler[F](token = config.telegram.token)
-      modules = NonEmptyList(rootModule, telegramModule(config.telegram)(handler) :: Nil)
+      modules = NonEmptyList(rootModule, telegramModule(config.telegram)(handler, nt) :: Nil)
       routes = modules.tail.foldLeft(modules.head.route) { (acc, module) =>
         acc ~ module.route
       }
@@ -90,7 +92,12 @@ class Server[F[_]: ConfigModule: Sync: Async: Monad](
     new RootModule[F]
   }
 
-  private def telegramModule(config: TelegramConfig)(implicit handler: RequestHandler[F]): ApiModule[F] = {
+  private def telegramModule(
+      config: TelegramConfig
+  )(implicit handler: RequestHandler[F], nt: Future ~> F): ApiModule[F] = {
+
+    import actorSystem.dispatcher
+    implicit val storage: Storage[F] = new PostgreSQLStorage
 
     implicit val interpretator: Interpretator[F] = new Interpretator[F]
 
@@ -101,7 +108,9 @@ class Server[F[_]: ConfigModule: Sync: Async: Monad](
     new TelegramModule[F]
   }
 
-  private def registerTelegramWebhook(config: TelegramConfig)(implicit handler: RequestHandler[F]): F[Unit] =
+  private def registerTelegramWebhook(
+      config: TelegramConfig
+  )(implicit handler: RequestHandler[F]): F[Unit] =
     handler(SetWebhook(url = config.webhook)).void
 
 }

@@ -17,13 +17,18 @@ object Main extends IOApp {
       FunctionK.lift[IO, Future](unsafeToFuture)
     }
 
+    implicit val nt2: Future ~> IO = {
+      def toIO[A](f: Future[A]): IO[A] = IO.fromFuture(IO(f))
+      FunctionK.lift[Future, IO](toIO)
+    }
+
     implicit val configModule: ConfigModule[IO] = new ConfigModuleImpl[IO]
 
     implicit val server: Server[IO] = new Server[IO]
 
     for {
-      server <- IO.fromFuture(Server[IO].run())
-      _ = println(server)
+      server <- IO.fromFuture(Server[IO].run(nt2))
+      _ <- IO { println(server) }
       _ <- IO.never
     } yield ExitCode.Success
   }
