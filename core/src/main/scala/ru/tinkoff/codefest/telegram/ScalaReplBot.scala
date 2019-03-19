@@ -28,9 +28,10 @@ class ScalaReplBot[F[_]: RequestHandler: Storage: Interpretator: Monad: Sync]
       text <- message.text.toOptionT[F]
       chatId = message.chat.id
       cmd <- OptionT.liftF(text match {
-        case BotCommand(Reset) => reset(chatId)
-        case BotCommand(State) => state(chatId)
-        case _                 => interpret(chatId, text)
+        case BotCommand(Start | Help) => help(chatId)
+        case BotCommand(Reset)        => reset(chatId)
+        case BotCommand(State)        => state(chatId)
+        case _                        => interpret(chatId, text)
       })
     } yield cmd
     maybeUnit.getOrElseF(F.unit)
@@ -43,12 +44,15 @@ class ScalaReplBot[F[_]: RequestHandler: Storage: Interpretator: Monad: Sync]
       result <- Interpretator[F].interpret(newState)
       text = result match {
         case Result(IR.Incomplete, _, _)                 => "<incomplete>" //fixme
-        case Result(_, output, _) if output.trim.isEmpty => "<empty>"      //fixme
+        case Result(_, output, _) if output.trim.isEmpty => "<empty>" //fixme
         case Result(_, output, _)                        => output
       }
       _ <- RequestHandler[F].apply(SendMessage(chatId = chatId, text = text))
       _ <- storage.save(chatId, result.compiled)
     } yield F.unit
+
+  private def help(chatId: Long): F[Unit] =
+    RequestHandler[F].apply(SendMessage(chatId = chatId, text = ScalaReplBot.help)).map(_ => F.unit)
 
   private def reset(chatId: Long): F[Unit] =
     for {
@@ -58,7 +62,15 @@ class ScalaReplBot[F[_]: RequestHandler: Storage: Interpretator: Monad: Sync]
 
   private def state(chatId: Long): F[Unit] =
     for {
-      s <- storage.load(chatId).map(_.getOrElse(""))
+      s <- storage.load(chatId).map(_.getOrElse("<empty state>"))
       _ <- RequestHandler[F].apply(SendMessage(chatId = chatId, text = s))
     } yield F.unit
+}
+
+object ScalaReplBot {
+  val help =
+    """
+      |Hello, I am ScaREBot
+      |My goal is interpret your scala code!
+    """.stripMargin
 }

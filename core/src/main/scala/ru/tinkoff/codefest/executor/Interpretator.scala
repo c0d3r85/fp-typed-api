@@ -22,21 +22,17 @@ class Interpretator[F[_]: Sync] {
     //settings.usemanifestcp.value = true использовать если cp, определен в манифесте, например для LauncherJarPlugin
 
     val foldFunction: IMain => (IRState, String) => IRState = intp => {
-      case (IRState(IR.Error, _, _), _) => IRState(IR.Error)
+      case (IRState(IR.Error, compiled, _), _) => IRState(IR.Error, compiled)
       case (state, line) =>
         val code =
           if (state.status == IR.Incomplete)
             state.incompleteBuffer.fold(line)(b => s"$b$EOL$line")
           else line
+        val total = state.compiled.fold(code)(c => s"$c$EOL$code")
         intp.interpret(code) match {
-          case IR.Success    =>
-            val acc = for {
-              c <- state.compiled
-              i <- state.incompleteBuffer
-            } yield s"$c$EOL$i"
-            IRState(IR.Success, compiled = acc.fold(line)(a => s"$a$EOL$line").some)
-          case IR.Error      => IRState(IR.Error)
-          case IR.Incomplete => IRState(IR.Incomplete, code.some)
+          case IR.Success    => IRState(IR.Success, total.some)
+          case IR.Incomplete => IRState(IR.Incomplete, state.compiled, code.some)
+          case IR.Error      => IRState(IR.Error, state.compiled)
         }
     }
     val res = for {
@@ -54,7 +50,8 @@ class Interpretator[F[_]: Sync] {
       }
       intp.close()
       out.flush()
-      Result(state.status, out.toString, state.compiled)
+      val compiled = List(state.compiled, state.incompleteBuffer).flatten.mkString(EOL)
+      Result(state.status, out.toString, compiled.some.filter(_.trim.nonEmpty))
     }
     res.use(F.pure)
   }
@@ -64,8 +61,8 @@ object Interpretator {
   final case class Result(status: IR.Result, output: String, compiled: Option[String])
   final case class IRState(
       status: IR.Result = IR.Success,
-      incompleteBuffer: Option[String] = None,
-      compiled: Option[String] = None
+      compiled: Option[String] = None,
+      incompleteBuffer: Option[String] = None
   )
   private val EOL = "\n"
   def apply[F[_]: Interpretator]: Interpretator[F] = implicitly[Interpretator[F]]
