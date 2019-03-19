@@ -8,8 +8,10 @@ sealed trait BotCommand extends EnumEntry with Lowercase
 
 object BotCommand extends Enum[BotCommand] {
 
+  case object Start extends BotCommand
   case object Reset extends BotCommand
   case object State extends BotCommand
+  case object Help  extends BotCommand
 
   val values = findValues
 
