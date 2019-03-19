@@ -1,14 +1,17 @@
 package ru.tinkoff.codefest.executor
 
 import java.io.{ByteArrayOutputStream, FileInputStream, PrintWriter}
+
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interpreter.{IMain, IR}
-
 import cats.data.NonEmptyList
 import cats.effect._
 import cats.syntax.option._
-
+import io.circe.generic.JsonCodec
+import io.circe.{Decoder, Encoder}
 import ru.tinkoff.codefest.executor.Interpretator.{IRState, Result}
+
+import scala.util.Try
 
 class Interpretator[F[_]: Sync] {
   import Interpretator.EOL
@@ -17,7 +20,17 @@ class Interpretator[F[_]: Sync] {
 
   def interpret(code: NonEmptyList[String]): F[Result] = {
     val settings = new Settings
-    settings.processArgumentString("-deprecation -feature")
+    val args = List(
+      "-deprecation",
+      "-feature",
+      "-unchecked",
+      "-language:postfixOps",
+      "-language:higherKinds",
+      "-language:implicitConversions",
+      "-Ypartial-unification",
+      "-Xplugin:kind-projector"
+    )
+    settings.processArgumentString(args.mkString(" "))
     settings.usejavacp.value = true
     //settings.usemanifestcp.value = true использовать если cp, определен в манифесте, например для LauncherJarPlugin
 
@@ -29,11 +42,11 @@ class Interpretator[F[_]: Sync] {
             state.incompleteBuffer.fold(line)(b => s"$b$EOL$line")
           else line
         val total = state.compiled.fold(code)(c => s"$c$EOL$code")
-        intp.interpret(code) match {
+        Try(intp.interpret(code)).map {
           case IR.Success    => IRState(IR.Success, total.some)
           case IR.Incomplete => IRState(IR.Incomplete, state.compiled, code.some)
           case IR.Error      => IRState(IR.Error, state.compiled)
-        }
+        } getOrElse IRState(IR.Error, state.compiled)
     }
     val res = for {
       out <- Resource.fromAutoCloseable(F.delay(new ByteArrayOutputStream))
@@ -58,7 +71,17 @@ class Interpretator[F[_]: Sync] {
 }
 
 object Interpretator {
+  @JsonCodec
   final case class Result(status: IR.Result, output: String, compiled: Option[String])
+  object Result {
+    implicit val d: Decoder[IR.Result] = Decoder.decodeString.map {
+      case "success"    => IR.Success
+      case "error"      => IR.Error
+      case "incomplete" => IR.Incomplete
+    }
+    implicit val e: Encoder[IR.Result] =
+      Encoder.encodeString.contramap[IR.Result](_.getClass.getSimpleName.toLowerCase.dropRight(1))
+  }
   final case class IRState(
       status: IR.Result = IR.Success,
       compiled: Option[String] = None,

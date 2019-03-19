@@ -9,7 +9,7 @@ final case class WebConfig(port: Int)
 
 final case class TelegramConfig(token: String, webhook: String)
 
-final case class Config(web: WebConfig, telegram: TelegramConfig)
+final case class Config(web: WebConfig, telegram: Option[TelegramConfig])
 
 @typeclass(generateAllOps = false) trait ConfigModule[F[_]] {
 

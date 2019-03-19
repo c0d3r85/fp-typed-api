@@ -1,1 +1,1 @@
-web: akka-http/target/universal/stage/bin/akka-http -Dweb.port=${PORT} -Dtelegram.token=${TELEGRAM_TOKEN}
+web: akka-http/target/universal/stage/bin/akka-http -Dweb.port=${PORT} -Dtelegram.token=${TELEGRAM_TOKEN} -XX:+UseG1GC -Xmx256m -Xms256m -Xss512k -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap

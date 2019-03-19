@@ -67,15 +67,13 @@ class Server[F[_]: ConfigModule: Sync: Async: Monad](
     import actorSystem.dispatcher
     for {
       config <- ConfigModule[F].load
-      handler = new RequestHandler[F](token = config.telegram.token)
-      modules = NonEmptyList(rootModule, telegramModule(config.telegram)(handler, nt) :: Nil)
+      modules = NonEmptyList.of(rootModule)
       routes = modules.tail.foldLeft(modules.head.route) { (acc, module) =>
         acc ~ module.route
       }
       b <- Sync[F].delay(
         Http().bindAndHandle(logRequestResult(InfoLevel, routes), "0.0.0.0", config.web.port)
       )
-      _ <- registerTelegramWebhook(config.telegram)(handler)
     } yield b
 
   }
