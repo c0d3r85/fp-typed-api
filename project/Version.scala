@@ -10,7 +10,7 @@ object Version {
 
   val simulacrum: String = "0.15.0"
 
-  val sttpBackend: String = "1.5.11"
+  val sttp: String = "1.5.11"
 
   val tschema: String = "0.10.7.1"
 

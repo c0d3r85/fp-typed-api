@@ -1,7 +1,6 @@
 package ru.tinkoff.codefest.http
 
 import scala.concurrent.Future
-
 import akka.actor.ActorSystem
 import akka.event.Logging.{InfoLevel, LogLevel}
 import akka.event.LoggingAdapter
@@ -23,8 +22,7 @@ import com.bot4s.telegram.methods.SetWebhook
 import com.bot4s.telegram.models.Update
 import com.softwaremill.sttp.SttpBackend
 import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
-
-import ru.tinkoff.codefest.executor.Interpretator
+import ru.tinkoff.codefest.executor.{Interpretator, LocalInterpretator, RemoteInterpretator}
 import ru.tinkoff.codefest.http.api.{Root, Telegram}
 import ru.tinkoff.codefest.http.telegram.{TelegramController, TelegramModule}
 import ru.tinkoff.codefest.storage.Storage
@@ -86,8 +84,7 @@ class Server[F[_]: ConfigModule: Sync: Async: Monad](
 
   private def rootModule: ApiModule[F] = {
 
-    implicit val controller: Root.Controller[F] =
-      new RootController[F](new Interpretator)
+    implicit val controller: Root.Controller[F] = new RootController[F](new RemoteInterpretator)
 
     new RootModule[F]
   }
@@ -99,7 +96,7 @@ class Server[F[_]: ConfigModule: Sync: Async: Monad](
     import actorSystem.dispatcher
     implicit val storage: Storage[F] = new PostgreSQLStorage
 
-    implicit val interpretator: Interpretator[F] = new Interpretator[F]
+    implicit val interpretator: Interpretator[F] = new RemoteInterpretator[F]
 
     implicit val telegramBot: TelegramBot[F] = new ScalaReplBot[F]
 

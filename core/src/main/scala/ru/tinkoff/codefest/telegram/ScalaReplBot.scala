@@ -8,8 +8,7 @@ import cats.syntax.functor._
 import cats.syntax.option._
 import com.bot4s.telegram.methods.SendMessage
 import com.bot4s.telegram.models.Update
-import ru.tinkoff.codefest.executor.Interpretator
-import ru.tinkoff.codefest.executor.Interpretator.Result
+import ru.tinkoff.codefest.executor.{Interpretator, Result}
 import ru.tinkoff.codefest.storage.Storage
 
 import scala.tools.nsc.interpreter.IR
