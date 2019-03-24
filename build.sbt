@@ -1,4 +1,3 @@
-import sbt.Keys.libraryDependencies
 ThisBuild / organization := "ru.tinkoff"
 ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / scalaVersion := "2.12.7"
@@ -31,6 +30,8 @@ lazy val core = (project in file("core"))
     libraryDependencies += "io.getquill" %% "quill" % Version.quill,
     libraryDependencies += "org.typelevel" %% "cats-core" % Version.cats,
     libraryDependencies += "org.typelevel" %% "cats-effect" % Version.catsEffect,
+    libraryDependencies += "com.lihaoyi" %% "scalatags" % "0.6.7",
+    libraryDependencies += "de.heikoseeberger" %% "akka-http-circe" % Version.akkaHttpCirce,
     libraryDependencies += "com.bot4s" %% "telegram-core" % Version.telegramBot,
     libraryDependencies += "com.softwaremill.sttp" %% "circe" % Version.sttp,
     libraryDependencies += "com.softwaremill.sttp" %% "core" % Version.sttp
@@ -55,6 +56,8 @@ lazy val akkaHttp = (project in file("akka-http"))
     libraryDependencies += "org.typelevel" %% "cats-effect" % Version.catsEffect,
     libraryDependencies += "io.circe" %% "circe-config" % Version.circeConfig,
     libraryDependencies += "com.softwaremill.sttp" %% "async-http-client-backend-cats" % Version.sttp,
+    libraryDependencies += "com.lihaoyi" %% "scalatags" % "0.6.7",
+    libraryDependencies += "org.webjars.npm" % "swagger-ui-dist" % Version.swaggerUI,
   )
 
 lazy val codefest = (project in file("."))

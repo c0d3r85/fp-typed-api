@@ -21,4 +21,6 @@ object Version {
   val enumeratum = "1.5.13"
   
   val `postgresql-async` = "0.2.21"
+  
+  val swaggerUI = "3.17.2"
 }

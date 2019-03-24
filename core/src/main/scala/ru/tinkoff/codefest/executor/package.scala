@@ -1,12 +1,12 @@
 package ru.tinkoff.codefest
-import io.circe.{Decoder, Encoder}
+import io.circe.Decoder
 import io.circe.generic.JsonCodec
 
 import scala.tools.nsc.interpreter.IR
 
 package object executor {
 
-  @JsonCodec
+  @JsonCodec(decodeOnly = true)
   final case class Result(status: IR.Result, output: String, compiled: Option[String])
 
   object Result {
@@ -15,8 +15,6 @@ package object executor {
       case "error"      => IR.Error
       case "incomplete" => IR.Incomplete
     }
-    implicit val e: Encoder[IR.Result] =
-      Encoder.encodeString.contramap[IR.Result](_.getClass.getSimpleName.toLowerCase)
   }
 
   final case class IRState(

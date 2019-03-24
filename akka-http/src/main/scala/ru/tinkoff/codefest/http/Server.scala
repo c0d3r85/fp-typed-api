@@ -23,7 +23,7 @@ import com.bot4s.telegram.models.Update
 import com.softwaremill.sttp.SttpBackend
 import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import ru.tinkoff.codefest.executor.{Interpretator, LocalInterpretator, RemoteInterpretator}
-import ru.tinkoff.codefest.http.api.{Root, Telegram}
+import ru.tinkoff.codefest.http.api.{Root, SwaggerModule, Telegram}
 import ru.tinkoff.codefest.http.telegram.{TelegramController, TelegramModule}
 import ru.tinkoff.codefest.storage.Storage
 import ru.tinkoff.codefest.storage.postgresql.PostgreSQLStorage
@@ -67,9 +67,7 @@ class Server[F[_]: ConfigModule: Sync: Async: Monad](
       config <- ConfigModule[F].load
       handler = new RequestHandler[F](token = config.telegram.token)
       modules = NonEmptyList(rootModule, telegramModule(config.telegram)(handler, nt) :: Nil)
-      routes = modules.tail.foldLeft(modules.head.route) { (acc, module) =>
-        acc ~ module.route
-      }
+      routes = modules.map(_.route).toList.reduce(_ ~ _) ~ SwaggerModule.routes(rootModule.swagger)
       b <- Sync[F].delay(
         Http().bindAndHandle(logRequestResult(InfoLevel, routes), "0.0.0.0", config.web.port)
       )
