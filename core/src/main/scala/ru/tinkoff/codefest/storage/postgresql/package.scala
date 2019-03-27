@@ -8,4 +8,6 @@ package object postgresql {
   implicit class ChatId(val underlying: Long) extends AnyVal
 
   final case class Chat(chatId: ChatId, state: Option[String] = None)
+
+  final case class Snippet(id: String, code: String)
 }

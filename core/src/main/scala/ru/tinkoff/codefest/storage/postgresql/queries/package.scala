@@ -9,4 +9,8 @@ package object queries {
   def upsertChatQuery(chat: Chat) = quote {
     query[Chat].insert(lift(chat)).onConflictUpdate(_.chatId)((t, e) => t.state -> e.state)
   }
+
+  def findSnippetById(snippetId: String) = quote {
+    query[Snippet].filter(_.id == lift(snippetId))
+  }
 }
