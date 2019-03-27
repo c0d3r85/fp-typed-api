@@ -8,12 +8,12 @@ import com.softwaremill.sttp.circe._
 
 import scala.tools.nsc.interpreter.IR
 
-final class RemoteInterpretator[F[_]: ME[?[_], Throwable]: SttpBackend[?[_], Nothing]]()
+final class RemoteInterpretator[F[_]: ME[?[_], Throwable]: SttpBackend[?[_], Nothing]](remoteURI: String)
     extends Interpretator[F] {
 
   override def interpret(code: NonEmptyList[String]): F[Result] =
     sttp
-      .post(uri"https://scarebot-intp.herokuapp.com/api/interpret")
+      .post(uri"$remoteURI")
       .body(code.toList)
       .response(asJson[Result])
       .send()

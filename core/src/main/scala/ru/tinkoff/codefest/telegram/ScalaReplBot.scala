@@ -70,6 +70,6 @@ object ScalaReplBot {
   val help =
     """
       |Hello, I am ScaREBot
-      |My goal is interpret your scala code!
+      |My goal is to interpret your scala code!
     """.stripMargin
 }

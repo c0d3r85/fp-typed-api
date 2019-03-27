@@ -66,8 +66,9 @@ class Server[F[_]: ConfigModule: Sync: Async: Monad](
     for {
       config <- ConfigModule[F].load
       handler = new RequestHandler[F](token = config.telegram.token)
-      modules = NonEmptyList(rootModule, telegramModule(config.telegram)(handler, nt) :: Nil)
-      routes = modules.map(_.route).toList.reduce(_ ~ _) ~ SwaggerModule.routes(rootModule.swagger)
+      root = rootModule(config)
+      modules = NonEmptyList(root, telegramModule(config)(handler, nt) :: Nil)
+      routes = modules.map(_.route).toList.reduce(_ ~ _) ~ SwaggerModule.routes(root.swagger)
       b <- Sync[F].delay(
         Http().bindAndHandle(logRequestResult(InfoLevel, routes), "0.0.0.0", config.web.port)
       )
@@ -80,25 +81,25 @@ class Server[F[_]: ConfigModule: Sync: Async: Monad](
 
   private implicit val sttp: SttpBackend[F, Nothing] = AsyncHttpClientCatsBackend()
 
-  private def rootModule: ApiModule[F] = {
+  private def rootModule(config: Config): ApiModule[F] = {
 
-    implicit val controller: Root.Controller[F] = new RootController[F](new RemoteInterpretator)
+    implicit val controller: Root.Controller[F] = new RootController[F](new RemoteInterpretator(config.interpretator.uri))
 
     new RootModule[F]
   }
 
   private def telegramModule(
-      config: TelegramConfig
+      config: Config
   )(implicit handler: RequestHandler[F], nt: Future ~> F): ApiModule[F] = {
 
     import actorSystem.dispatcher
     implicit val storage: Storage[F] = new PostgreSQLStorage
 
-    implicit val interpretator: Interpretator[F] = new RemoteInterpretator[F]
+    implicit val interpretator: Interpretator[F] = new RemoteInterpretator[F](config.interpretator.uri)
 
     implicit val telegramBot: TelegramBot[F] = new ScalaReplBot[F]
 
-    implicit val controller: Telegram.Controller[F] = new TelegramController[F](config.token)
+    implicit val controller: Telegram.Controller[F] = new TelegramController[F](config.telegram.token)
 
     new TelegramModule[F]
   }

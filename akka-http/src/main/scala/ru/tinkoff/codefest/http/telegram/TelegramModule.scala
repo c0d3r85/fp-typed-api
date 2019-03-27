@@ -13,5 +13,5 @@ import ru.tinkoff.tschema.swagger.SwaggerBuilder
 class TelegramModule[F[_]: Controller](implicit nt: F ~> Future) extends ApiModule[F] {
 
   override def route: Route = MkRoute(routes)(Controller[F])
-  override def swagger: SwaggerBuilder = ???
+  override def swagger: SwaggerBuilder = SwaggerBuilder.empty
 }
