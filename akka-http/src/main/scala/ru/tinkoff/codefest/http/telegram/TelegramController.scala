@@ -4,6 +4,7 @@ import cats.MonadError
 import cats.syntax.functor._
 import cats.syntax.flatMap._
 import cats.syntax.monadError._
+import cats.syntax.applicativeError._
 import com.bot4s.telegram.models.Update
 
 import ru.tinkoff.codefest.http.api.Telegram.Controller
@@ -17,7 +18,7 @@ class TelegramController[F[_]: TelegramBot: MonadError[?[_], Throwable]](telegra
       _ <- MonadError[F, Throwable]
         .pure(telegramToken)
         .ensure(new IllegalArgumentException("Invalid token"))(_ == token)
-      _ <- TelegramBot[F].webhook(body)
+      _ <- TelegramBot[F].webhook(body).handleError(_ => ())
     } yield ()
 
 }
