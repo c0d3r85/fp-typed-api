@@ -1,7 +1,6 @@
 package ru.tinkoff.codefest.http
 
 import scala.concurrent.Future
-
 import akka.actor.ActorSystem
 import akka.event.Logging.{InfoLevel, LogLevel}
 import akka.event.LoggingAdapter
@@ -23,9 +22,8 @@ import com.bot4s.telegram.methods.SetWebhook
 import com.bot4s.telegram.models.Update
 import com.softwaremill.sttp.SttpBackend
 import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
-
-import ru.tinkoff.codefest.executor.Interpretator
-import ru.tinkoff.codefest.http.api.{Root, Telegram}
+import ru.tinkoff.codefest.executor.{Interpretator, LocalInterpretator, RemoteInterpretator}
+import ru.tinkoff.codefest.http.api.{Root, SwaggerModule, Telegram}
 import ru.tinkoff.codefest.http.telegram.{TelegramController, TelegramModule}
 import ru.tinkoff.codefest.storage.Storage
 import ru.tinkoff.codefest.storage.postgresql.PostgreSQLStorage
@@ -68,10 +66,9 @@ class Server[F[_]: ConfigModule: Sync: Async: Monad](
     for {
       config <- ConfigModule[F].load
       handler = new RequestHandler[F](token = config.telegram.token)
-      modules = NonEmptyList(rootModule, telegramModule(config.telegram)(handler, nt) :: Nil)
-      routes = modules.tail.foldLeft(modules.head.route) { (acc, module) =>
-        acc ~ module.route
-      }
+      root = rootModule(config)
+      modules = NonEmptyList(root, telegramModule(config)(handler, nt) :: Nil)
+      routes = modules.map(_.route).toList.reduce(_ ~ _) ~ SwaggerModule.routes(root.swagger)
       b <- Sync[F].delay(
         Http().bindAndHandle(logRequestResult(InfoLevel, routes), "0.0.0.0", config.web.port)
       )
@@ -84,26 +81,25 @@ class Server[F[_]: ConfigModule: Sync: Async: Monad](
 
   private implicit val sttp: SttpBackend[F, Nothing] = AsyncHttpClientCatsBackend()
 
-  private def rootModule: ApiModule[F] = {
+  private def rootModule(config: Config): ApiModule[F] = {
 
-    implicit val controller: Root.Controller[F] =
-      new RootController[F](new Interpretator)
+    implicit val controller: Root.Controller[F] = new RootController[F](new RemoteInterpretator(config.interpretator.uri))
 
     new RootModule[F]
   }
 
   private def telegramModule(
-      config: TelegramConfig
+      config: Config
   )(implicit handler: RequestHandler[F], nt: Future ~> F): ApiModule[F] = {
 
     import actorSystem.dispatcher
     implicit val storage: Storage[F] = new PostgreSQLStorage
 
-    implicit val interpretator: Interpretator[F] = new Interpretator[F]
+    implicit val interpretator: Interpretator[F] = new RemoteInterpretator[F](config.interpretator.uri)
 
     implicit val telegramBot: TelegramBot[F] = new ScalaReplBot[F]
 
-    implicit val controller: Telegram.Controller[F] = new TelegramController[F](config.token)
+    implicit val controller: Telegram.Controller[F] = new TelegramController[F](config.telegram.token)
 
     new TelegramModule[F]
   }

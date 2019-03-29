@@ -8,9 +8,9 @@ import cats.syntax.functor._
 import cats.syntax.option._
 import com.bot4s.telegram.methods.SendMessage
 import com.bot4s.telegram.models.Update
-import ru.tinkoff.codefest.executor.Interpretator
-import ru.tinkoff.codefest.executor.Interpretator.Result
+import ru.tinkoff.codefest.executor.{Interpretator, Result}
 import ru.tinkoff.codefest.storage.Storage
+import ru.tinkoff.codefest.storage.postgresql.Snippet
 
 import scala.tools.nsc.interpreter.IR
 
@@ -28,14 +28,30 @@ class ScalaReplBot[F[_]: RequestHandler: Storage: Interpretator: Monad: Sync]
       text <- message.text.toOptionT[F]
       chatId = message.chat.id
       cmd <- OptionT.liftF(text match {
-        case BotCommand(Start | Help) => help(chatId)
-        case BotCommand(Reset)        => reset(chatId)
-        case BotCommand(State)        => state(chatId)
-        case _                        => interpret(chatId, text)
+        case BotCommand(Start | Help)               => help(chatId)
+        case BotCommand(Reset)                      => reset(chatId)
+        case BotCommand(State)                      => state(chatId)
+        case snippetId if snippetId.startsWith("/") => snippet(chatId, snippetId.drop(1))
+        case _                                      => interpret(chatId, text)
       })
     } yield cmd
     maybeUnit.getOrElseF(F.unit)
   }
+
+  private def snippet(chatId: Long, snippetId: String): F[Unit] =
+    storage
+      .snippet(snippetId)
+      .flatMap {
+        case Some(Snippet(_, code)) =>
+          val msg = SendMessage(chatId = chatId, text = s"Snippet $snippetId\n\n$code")
+          for {
+            _ <- RequestHandler[F].apply(msg)
+            output <- Interpretator[F].interpret(NonEmptyList.of(code)).map(_.output)
+          } yield output
+        case None => F.pure("<unknown command>")
+      }
+      .map(SendMessage(chatId = chatId, _))
+      .flatMap(msg => RequestHandler[F].apply(msg).map(_ => ()))
 
   private def interpret(chatId: Long, text: String): F[Unit] =
     for {
@@ -71,6 +87,6 @@ object ScalaReplBot {
   val help =
     """
       |Hello, I am ScaREBot
-      |My goal is interpret your scala code!
+      |My goal is to interpret your scala code!
     """.stripMargin
 }
