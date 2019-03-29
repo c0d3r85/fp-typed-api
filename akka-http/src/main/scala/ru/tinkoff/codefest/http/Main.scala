@@ -10,6 +10,8 @@ import cats.~>
 object Main extends IOApp {
 
   override def run(args: List[String]): IO[ExitCode] = {
+    System.setSecurityManager(new BotSecurityManager)
+
     implicit val actorSystem: ActorSystem = ActorSystem("codefest")
 
     implicit val nt: IO ~> Future = {
